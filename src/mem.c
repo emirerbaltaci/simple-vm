@@ -165,6 +165,9 @@ static MEM_Status_t MEM_RWCommon(bool isReadOperation, MEM_t* mem, uint32_t addr
     *pPageNum = addr >> MEM_PAGE_OFFSET_BITS;
     *pOffset = addr & MEM_PAGE_OFFSET_MASK;
 
+    if(*pPageNum >= MEM_PAGE_COUNT)
+        return MEM_PAGENUMBER_OUTOFRANGE;
+
     if(mem->pageTable[*pPageNum] == NULL)
         return MEM_ACCESS_TO_FREE_PAGE;
 
@@ -413,3 +416,7 @@ MEM_Status_t MEM_Write32(MEM_t* mem, uint32_t addr, uint32_t val)
     }
 }
 
+inline uint32_t MEM_GetAddr(uint32_t pageNum, uint32_t offset)
+{
+    return ((pageNum << MEM_PAGE_OFFSET_BITS) | (offset & MEM_PAGE_OFFSET_MASK));
+}
