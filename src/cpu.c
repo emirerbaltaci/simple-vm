@@ -21,7 +21,7 @@ void CPU_Reset(CPU_t* cpu)
     CPU_Init(cpu);
 }
 
-static inline CPU_Status_t CPU_DecodeRegisterFormat(uint32_t* ins, uint32_t* pRd, uint32_t* pRs1, uint32_t* pRs2)
+static inline CPU_Status_t CPU_DecodeRegisterFormat(const uint32_t* ins, uint32_t* pRd, uint32_t* pRs1, uint32_t* pRs2)
 {
     if(ins == NULL || pRd == NULL || pRs1 == NULL || pRs2 == NULL)
         return CPU_NULL_POINTER;
@@ -38,7 +38,7 @@ static inline CPU_Status_t CPU_DecodeRegisterFormat(uint32_t* ins, uint32_t* pRd
 
 CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
 {
-    if(cpu == NULL)
+    if(cpu == NULL || mem == NULL)
         return CPU_NULL_POINTER;
     
     cpu->status = CPU_BUSY;
@@ -140,6 +140,56 @@ CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
             cpu->reg[rd] = cpu->reg[rs1] >> (cpu->reg[rs2] & 0x1F);
 
             break;
+        
+        case ADD:
+        {
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+
+            cpu->flags &= ~(CPU_FLAG_Z | CPU_FLAG_N | CPU_FLAG_C | CPU_FLAG_V);
+
+            uint32_t res = cpu->reg[rs1] + cpu->reg[rs2];
+
+            if(res == 0)
+                cpu->flags |= CPU_FLAG_Z;
+            if(res & 0x80000000U)
+                cpu->flags |= CPU_FLAG_N;
+            if(res < cpu->reg[rs1])
+                cpu->flags |= CPU_FLAG_C;
+            if( (cpu->reg[rs1] < 0x80000000U && cpu->reg[rs2] < 0x80000000U && res >= 0x80000000U)
+                || (cpu->reg[rs1] >= 0x80000000U && cpu->reg[rs2] >= 0x80000000U && res < 0x80000000U) )
+                cpu->flags |= CPU_FLAG_V;
+            
+            cpu->reg[rd] = res;
+
+            break;
+        }
+
+        case SUB:
+        {
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+            
+            cpu->flags &= ~(CPU_FLAG_Z | CPU_FLAG_N | CPU_FLAG_C | CPU_FLAG_V);
+            
+            uint32_t res = cpu->reg[rs1] - cpu->reg[rs2];
+            
+            if(res == 0)
+                cpu->flags |= CPU_FLAG_Z;
+            if(res & 0x80000000U)
+                cpu->flags |= CPU_FLAG_N;
+            if(cpu->reg[rs1] >= cpu->reg[rs2])
+                cpu->flags |= CPU_FLAG_C;
+            if( (cpu->reg[rs1] < 0x80000000U && cpu->reg[rs2] >= 0x80000000U && res >= 0x80000000U) 
+                || (cpu->reg[rs1] >= 0x80000000U && cpu->reg[rs2] < 0x80000000U && res < 0x80000000U) )
+                cpu->flags |= CPU_FLAG_V;
+
+            cpu->reg[rd] = res;
+
+            break;
+        }
 
         default:
             cpu->status = CPU_INVALID_OPCODE;

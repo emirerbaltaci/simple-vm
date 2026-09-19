@@ -19,6 +19,11 @@
 #define CPU_INS_IMM_LOW22_MASK 0x003FFFFF
 #define CPU_INS_IMM_HIGH10_MASK 0x3FF
 
+#define CPU_FLAG_Z (1U << 0)    /// Zero
+#define CPU_FLAG_N (1U << 1)    /// Negative
+#define CPU_FLAG_C (1U << 2)    /// Carry in ADD, Inverse Borrow in SUB
+#define CPU_FLAG_V (1U << 3)    /// Overflow
+
 #define CPU_INS_OPCODE_OFFSET (32 - CPU_INS_OPCODE_BITS)
 #define CPU_INS_RD_OFFSET (CPU_INS_OPCODE_OFFSET - CPU_INS_RD_BITS)
 #define CPU_INS_RS1_OFFSET (CPU_INS_RD_OFFSET - CPU_INS_RS1_BITS)
@@ -44,7 +49,10 @@ typedef enum {
     XOR,
     NOT,
     SHL,
-    SHR
+    SHR,
+    ADD,
+    SUB,
+
 }CPU_Opcode_t;
 
 typedef struct {
