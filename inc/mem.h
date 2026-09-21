@@ -1,7 +1,7 @@
 /**
  * @file mem.h
  * @author Emir Erbaltacı (erbaltaciemir@hotmail.com)
- * @brief 
+ * @brief Header File for Memory Controller Structures and Function Prototypes
  * @version 0.1.0
  * @date 17-09-2026
  * 

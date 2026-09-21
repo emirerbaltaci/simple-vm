@@ -1,3 +1,14 @@
+/**
+ * @file mem.c
+ * @author Emir Erbaltacı (erbaltaciemir@hotmail.com)
+ * @brief Implementation File for Memory Functions
+ * @version 0.1.0
+ * @date 21-09-2026
+ * 
+ * @copyright Copyright (c) 2026 Emir Erbaltacı. Licensed under the MIT License.
+ * 
+ */
+
 #include "mem.h"
 #include <stdlib.h>
 #include <stdbool.h>

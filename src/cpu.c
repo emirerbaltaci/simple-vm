@@ -1,9 +1,20 @@
+/**
+ * @file cpu.c
+ * @author Emir Erbaltacı (erbaltaciemir@hotmail.com)
+ * @brief Implementation File for CPU Functions and Instruction Set
+ * @version 0.1.0
+ * @date 21-09-2026
+ * 
+ * @copyright Copyright (c) 2026 Emir Erbaltacı. Licensed under the MIT License.
+ * 
+ */
+
 #include "cpu.h"
 
-void CPU_Init(CPU_t* cpu)
+CPU_Status_t CPU_Init(CPU_t* cpu)
 {
     if(cpu == NULL)
-        return;
+        return CPU_NULL_POINTER;
 
     cpu->status = CPU_BUSY;
 
@@ -11,14 +22,10 @@ void CPU_Init(CPU_t* cpu)
     for(int i = 0; i < CPU_REG_FP_COUNT; i++) cpu->reg_fp[i] = 0;
     cpu->flags = 0;
     cpu->pc = 0;
-    cpu->sp = 0;
+    cpu->sp = 0xFFFFFFFCU;
 
     cpu->status = CPU_OK;
-}
-
-void CPU_Reset(CPU_t* cpu)
-{
-    CPU_Init(cpu);
+    return CPU_OK;
 }
 
 static inline CPU_Status_t CPU_DecodeRegisterFormat(const uint32_t* ins, uint32_t* pRd, uint32_t* pRs1, uint32_t* pRs2)
@@ -34,6 +41,21 @@ static inline CPU_Status_t CPU_DecodeRegisterFormat(const uint32_t* ins, uint32_
         return CPU_INVALID_REGISTER;
 
     return CPU_OK;
+}
+
+static inline void CPU_ResetALUFlags(CPU_t* cpu)
+{
+    cpu->flags &= ~(CPU_FLAG_Z | CPU_FLAG_N | CPU_FLAG_C | CPU_FLAG_V);
+}
+
+static inline void CPU_HandleBranchOffset(CPU_t* cpu, uint32_t ins)
+{
+    int32_t offset = (int32_t)(ins & 0x03FFFFFFU);
+
+    if(offset & 0x02000000)
+        offset |= (int32_t)0xFC000000U;
+    
+    cpu->pc += ((uint32_t)offset << 2);
 }
 
 CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
@@ -147,7 +169,7 @@ CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
             if(cpuRet != CPU_OK)
                 break;
 
-            cpu->flags &= ~(CPU_FLAG_Z | CPU_FLAG_N | CPU_FLAG_C | CPU_FLAG_V);
+            CPU_ResetALUFlags(cpu);
 
             uint32_t res = cpu->reg[rs1] + cpu->reg[rs2];
 
@@ -172,7 +194,7 @@ CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
             if(cpuRet != CPU_OK)
                 break;
             
-            cpu->flags &= ~(CPU_FLAG_Z | CPU_FLAG_N | CPU_FLAG_C | CPU_FLAG_V);
+            CPU_ResetALUFlags(cpu);
             
             uint32_t res = cpu->reg[rs1] - cpu->reg[rs2];
             
@@ -190,6 +212,139 @@ CPU_Status_t CPU_Step(CPU_t* cpu, MEM_t* mem)
 
             break;
         }
+
+        case CMP:
+        {
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+            
+            CPU_ResetALUFlags(cpu);
+
+            uint32_t res = cpu->reg[rs1] - cpu->reg[rs2];
+
+            if(res == 0)
+                cpu->flags |= CPU_FLAG_Z;
+            if(res & 0x80000000U)
+                cpu->flags |= CPU_FLAG_N;
+            if(cpu->reg[rs1] >= cpu->reg[rs2])
+                cpu->flags |= CPU_FLAG_C;
+            if( (cpu->reg[rs1] < 0x80000000U && cpu->reg[rs2] >= 0x80000000U && res >= 0x80000000U) 
+                || (cpu->reg[rs1] >= 0x80000000U && cpu->reg[rs2] < 0x80000000U && res < 0x80000000U) )
+                cpu->flags |= CPU_FLAG_V;
+            
+            break;
+        }
+
+        case JZ:
+            if(cpu->flags & CPU_FLAG_Z)
+                CPU_HandleBranchOffset(cpu, ins);
+
+            break;
+        
+        case JNZ:
+            if(!(cpu->flags & CPU_FLAG_Z))
+                CPU_HandleBranchOffset(cpu, ins);
+
+            break;
+
+        case JC:
+            if(cpu->flags & CPU_FLAG_C)
+                CPU_HandleBranchOffset(cpu, ins);
+
+            break;
+        
+        case JNC:
+            if(!(cpu->flags & CPU_FLAG_C))
+                CPU_HandleBranchOffset(cpu, ins);
+
+            break;
+
+        case JMP:
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+            
+            cpu->pc = cpu->reg[rs1];
+            
+            break;
+        
+        case PUSH:
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+            
+            cpu->sp -= 4;
+            memRet = MEM_Write32(mem, cpu->sp, cpu->reg[rs1]);
+            if(memRet != MEM_OK)
+            {
+                cpu->sp += 4;
+                cpu->status = CPU_MEM_STORE_ERROR;
+                return CPU_MEM_STORE_ERROR;
+            }
+
+            break;
+
+        case POP:
+            if(cpu->sp <= 0xFFFFFFF8U)
+            {
+                cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+                if(cpuRet != CPU_OK)
+                    break;
+            
+                memRet = MEM_Read32(mem, cpu->sp, &cpu->reg[rd]);
+                if(memRet != MEM_OK)
+                {
+                    cpu->status = CPU_MEM_FETCH_ERROR;
+                    return CPU_MEM_FETCH_ERROR;
+                }
+                cpu->sp += 4;
+            }
+            else
+            {
+                cpu->status = CPU_EMPTY_STACK_POP;
+                return CPU_EMPTY_STACK_POP;
+            }
+
+            break;
+
+        case CALL:
+            cpuRet = CPU_DecodeRegisterFormat(&ins, &rd, &rs1, &rs2);
+            if(cpuRet != CPU_OK)
+                break;
+            
+            cpu->sp -= 4;
+            memRet = MEM_Write32(mem, cpu->sp, cpu->pc);
+            if(memRet != MEM_OK)
+            {
+                cpu->sp += 4;
+                cpu->status = CPU_MEM_STORE_ERROR;
+                return CPU_MEM_STORE_ERROR;
+            }
+
+            cpu->pc = cpu->reg[rs1];
+            
+            break;
+
+        case RET:
+            
+            if(cpu->sp <= 0xFFFFFFF8U)
+            {
+                memRet = MEM_Read32(mem, cpu->sp, &cpu->pc);
+                if(memRet != MEM_OK)
+                {
+                    cpu->status = CPU_MEM_FETCH_ERROR;
+                    return CPU_MEM_FETCH_ERROR;
+                }
+                cpu->sp += 4;
+            }
+            else
+            {
+                cpu->status = CPU_EMPTY_STACK_RETURN;
+                return CPU_EMPTY_STACK_RETURN;
+            }
+            
+            break;
 
         default:
             cpu->status = CPU_INVALID_OPCODE;
