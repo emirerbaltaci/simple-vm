@@ -62,7 +62,7 @@
  */
 #define CPU_FLAG_Z (1U << 0)    /// Set if result is 0
 #define CPU_FLAG_N (1U << 1)    /// Set if result is negative
-#define CPU_FLAG_C (1U << 2)    /// ADD: Set if unsigned overflow happened, SUB/CMP: Set if no borrow is required
+#define CPU_FLAG_C (1U << 2)    /// ADD: Set if unsigned overflow happened, SUB/CMP: Set if no borrow was required
 #define CPU_FLAG_V (1U << 3)    /// Set if signed overflow happened
 
 /**

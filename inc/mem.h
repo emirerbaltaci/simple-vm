@@ -23,14 +23,14 @@
 typedef enum {
     MEM_OK = 0,
     MEM_BUSY,
+    MEM_NULL_POINTER,
     MEM_ALLOC_FAIL,
     MEM_ALREADY_FREE,
-    MEM_NULL_POINTER,
     MEM_PAGENUMBER_OUTOFRANGE,
     MEM_NEXTPAGENUMBER_OUTOFRANGE,
+    MEM_NEXTPAGE_NOT_ALLOCATED,
     MEM_PAGENUMBER_OCCUPIED,
     MEM_ACCESS_TO_FREE_PAGE,
-    MEM_NEXTPAGE_NOT_ALLOCATED,
     MEM_UNKNOWN_ERROR
 }MEM_Status_t;
 
@@ -42,7 +42,7 @@ typedef struct {
 
 /// @brief Memory controller structure.
 typedef struct {
-    MEM_Page_t** pageTable; /// Pointer to page pointers. Will be replaced by multi level paging in near future.
+    MEM_Page_t** pageTable; /// Pointer to page pointers. Will be replaced by multi-level paging in near future.
     MEM_Status_t status;    /// Memory controller status arising from the last operation.
 }MEM_t;
 
