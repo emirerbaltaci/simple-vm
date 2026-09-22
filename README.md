@@ -53,7 +53,7 @@ typedef struct {
 ```
 ```CPU_REG_COUNT``` and ```CPU_REG_FP_COUNT``` are configuration macros defined in the same file. By default, they are both 16. It may be decreased, implementation takes invalid register access possibility to account. But to increase it, one needs to modify the instructions as register bit fields are 4 bits long.  
 ### CPU Status and API Return Values
-Note that CPU controller holds the response to last operation. ```CPU_Status_t``` is an enumeration of possible responses. All CPU API functions return ```CPU_Status_t```, which is helpful for error handling and debugging. The enumeration is implemented in [inc/cpu.h][inc/cpu.h] tabulated below.
+Note that CPU controller holds the response to last operation. ```CPU_Status_t``` is an enumeration of possible responses. All CPU API functions return ```CPU_Status_t```, which is helpful for error handling and debugging. The enumeration is implemented in [inc/cpu.h][inc/cpu.h], and tabulated below:
 
 | Response | Value | Description |
 | -------- | ----- | ----------- |
@@ -111,7 +111,7 @@ typedef struct {
 ```
 ### Memory Controller Status and API Return Values
 
-The memory controller API provides functions for initialization/deinitialization, page allocation/deallocation, 8/16/32 read/write operations, and conversion of page number and offset values into absolute address value. All API functions except ```MEM_GetAddr``` return ```MEM_Status_t```, similar to the CPU controller which returns ```CPU_Status_t```. Enumeration is present in [inc/mem.h] and is tabulated below:
+The memory controller API provides functions for initialization/deinitialization, page allocation/deallocation, 8/16/32-bit read/write operations, and conversion of page number and offset values into absolute address value. All API functions except ```MEM_GetAddr``` return ```MEM_Status_t```, similar to the CPU controller which returns ```CPU_Status_t```. Enumeration is present in [inc/mem.h] and is tabulated below:
 
 | Response | Value | Description |
 |---|---|---|
